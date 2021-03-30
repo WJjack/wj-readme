@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": ["前端面试", "前端", "前端经验总结", "前端架构", "wj"],
   "author": "",
   "license": "ISC"
 }
