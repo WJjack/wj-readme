@@ -1,4 +1,46 @@
+参考地址：https://blog.csdn.net/zn740395858/article/details/122091062
+
+参考地址：https://blog.csdn.net/qq_39261142/article/details/116176902
+
+css-loader@6.5.1：会对@import和url()进行处理
+style-loader@3.3.1：将CSS注入到JavaScript中，通过DOM操作控制css
+autoprefixer@10.4.0：增加厂商前缀（css增加浏览器内核前缀）
+postcss-loader@6.2.0：处理css的loader
+babel-loader@8.2.3：webpack的babel插件，在webpack中运行babel
+@babel/core@7.16.0：babel核心库
+@babel/preset-env@7.16.4：将ES6转换为向后兼容的JavaScript
+@babel/plugin-transform-runtime@7.16.4：处理async，await、import()等语法关键字的帮助函数
+ts-loader@9.2.6
+
+
+
+html-webpack-plugin@5.5.0：生成一个HTML5文件，在body中使用script标签引入webpack生成的bundle
+clean-webpack-plugin@4.0.0：再次打包的时候，先把本地已有的打包后的资源清空，来减少它们对磁盘空间的占用
+progress-bar-webpack-plugin@2.1.0：增加编译进度条
+chalk@4.1.2
+speed-measure-webpack-plugin@1.5.0：[非必备]构建速度分析，可以看到各个 loader、plugin 的构建时长，后续可针对耗时 loader、plugin 进行优化
+webpack-bundle-analyzer@4.5.0：查看打包后生成的 bundle 体积分析
+
+
+
+- webpack-merge@5.8.0：合并通用配置和特定环境配置
+- mini-css-extract-plugin@2.4.5
+- css-minimizer-webpack-plugin@3.1.4：优化、压缩 CSS
+
+
+
+- prettier@2.4.1：代码格式的校验（并格式化代码），不会对代码质量进行校验
+- eslint@8.2.0：代码格式的校验，代码质量的校验，`JS`规范
+- eslint-config-prettier@8.3.0：覆盖`eslint`部分规则，解决冲突
+
+
+
+> 在webpack5中，内置了资源模块（asset module），代替了file-loader和url-loader
+
+
+
 ### css热更新
+
 > 启动热更新后，css抽离不会生效，还有不支持contenthash,chunkhash
 
 ```javascript
@@ -56,6 +98,9 @@ module.exports = {
 ```
 
 ### 压缩css文件
+
+方法一：
+
 > npm i optimize-css-assets-webpack-plugin cssnano -D
 
 ```javascript
@@ -73,7 +118,30 @@ plugins: [
 ]
 ```
 
+方法二：
+
+参考地址：https://webpack.docschina.org/plugins/mini-css-extract-plugin/#minimizing-for-production
+
+安装插件：`npm i css-minimizer-webpack-plugin -D`
+
+webpack.config.js
+
+```js
+module.exports = {
+    optimization: {
+        minimizer: [
+            new CssMinimizerWebpackPlugin()
+        ],
+    }
+}
+```
+
+
+
+
+
 ### 压缩HTML文件
+
 > npm i html-webpack-plugin -D
 
 ```javascript
@@ -94,7 +162,96 @@ plugins: [
 ]
 ```
 
+
+
+### 配置静态文件目录
+
+默认情况下，打包以后的文件是散在 dist 文件夹中的，难以区分和维护。
+
+现在，需要将他们分门别类地放进对应的文件夹中，就需要对文件名做统一的管理。
+
+webpack.config.js
+
+```js
+module.exports = {
+    module: {
+        rules: [
+          // 图片文件
+          {
+            test: /\.(jpe?g|png|gif)$/i,
+            type: "asset",
+            generator: {
+              filename: "images/[name]_[hash][ext]", // 独立的配置
+            },
+              parser: {
+                  dataUrlCondition: {
+                    maxSize: 10 * 1024 // 小于10kb的图片会转换成base64
+                }
+              }
+          },
+          // svg 文件
+          {
+            test: /\.svg$/i,
+            type: "asset",
+            generator: {
+              dataUrl(content) {
+                content = content.toString();
+                return miniSVGDataURI(content);
+              },
+            },
+          },
+          // 字体文件
+          {
+            test: /\.(otf|eot|woff2?|ttf|svg)$/i,
+            type: "asset",
+            generator: {
+              filename: "fonts/[name]_[hash][ext]",
+            },
+          },
+          // 数据文件
+          {
+            test: /\.(txt|xml)$/i,
+            type: "asset/source", // exports the source code of the asset
+          },
+        ]
+    }
+}
+```
+
+
+
+### json5的转换
+
+参考地址：https://webpack.docschina.org/guides/asset-management/#loading-images
+
+查找目录：管理资源/加载数据
+
+安装插件`npm i json5 -D`
+
+webpack.config.js
+
+```js
+const json5 = require('json5');
+
+module.exports = {
+    module: {
+        rules: [
+            {
+                test: /\.json5$/,
+                type: 'json',
+                parser: {
+                    parse: json5.parse
+                }
+            }
+        ]
+    }
+}
+```
+
+
+
 ### babel处理ES6
+
 * npm i babel-loader @babel/core @babel/preset-env -D
 * polyfill语法垫片，解决ES6兼容性，npm i @babel-polyfill -S，由于polyfill体积过于庞大，需要按需引用
 
@@ -481,7 +638,8 @@ modules: {
 plugins: [
     new HappyPack({
         id: 'css',
-        loaders: ['style-loader', 'css-loader']
+        loaders: ['style-loader', 'css-loader'],
+        threadPool：happyThreadPool
     })
 ]
 ```
@@ -489,3 +647,49 @@ plugins: [
 > 有坑，不能与minicssextractplugin很好的配合
 
 
+
+### 由于使用了ts，所以引入less或scss文件时报类型错误
+
+由于使用了 ts，在导入文件的时候可能会出现类型错误，如 css module 的 import style from './index.scss' 报错 找不到模块“./index.scss”或其相应的类型声明，因此需要手动编写声明类型文件，在 src 目录下新建 typings 目录并新建 file.d.ts 文件
+
+```ts
+declare module '*.css' {
+    const classes: {
+        readonly [k: string]: string
+    }
+    export default classes
+}
+
+declare module '*.less' {
+    const classes: {
+        readonly [k: string]: string
+    }
+    export default classes
+}
+
+declare module '*.scss' {
+    const classes: {
+        readonly [k: string]: string
+    }
+    export default classes
+}
+
+declare module '*.sass' {
+    const classes: {
+        readonly [k: string]: string
+    }
+    export default classes
+}
+```
+
+
+
+### 打包类型检查
+
+目前 webpack 打包时不会有类型检查信息（为了编译速度，babel 编译 ts 时直接将类型去除，并不会对 ts 的类型做检查），即使类型不正确终端也会显示打包成功，有误导性，为此添加上打包类型检查，下载第三方包：
+
+> `fork-ts-checker-webpack-plugin`：ts 类型检查，让终端可以显示类型错误
+
+`yarn add fork-ts-checker-webpack-plugin` 
+
+![image-20220127164905079](https://woniumd.oss-cn-hangzhou.aliyuncs.com/web/wujie/20220127164916.png)
