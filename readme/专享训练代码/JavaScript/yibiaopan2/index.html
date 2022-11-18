@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link href="index.css" rel="stylesheet" />
+</head>
+<body>
+    <div class="box">
+        <p id="text" class="text"></p>
+        <div id="container" class="container"></div>
+    </div>
+    <input type="range" class="range" value="0" oninput="rangeInput(this)" />
+
+    <script src="index.js"></script>
+    <script>
+        let instance = new Yibiaopan('container', 100, 'text');
+
+        function rangeInput(inputDom) {
+            let value = +inputDom.value;
+            instance.changeRange(value);
+            instance.setText(value)
+        }
+    </script>
+</body>
+</html>
