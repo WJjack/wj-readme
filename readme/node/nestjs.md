@@ -451,9 +451,9 @@ bootstrap();
 
 ### nestjs生命周期
 
-![image-20230624213636130](C:\Users\jack\AppData\Roaming\Typora\typora-user-images\image-20230624213636130.png)
+[![pPfuGuR.png](https://z1.ax1x.com/2023/09/16/pPfuGuR.png)](https://imgse.com/i/pPfuGuR)
 
-
+![](https://woniumd.oss-cn-hangzhou.aliyuncs.com/web/wujie/20230829105417.png)
 
 ### 爬虫
 
@@ -547,7 +547,15 @@ export class WebSpiderService {
 
 在nestjs中可以使用dotenv、js-yaml、config插件读取环境变量
 
-#### nestjs官方默认使用dotenv的方式配置环境变量：
+#### 一、nestjs官方默认使用dotenv的方式配置环境变量：
+
+安装插件`@nestjs/config`
+
+```bash
+yarn add @nestjs/config
+```
+
+
 
 ```typescript
 import { Module } from '@nestjs/common';
@@ -579,4 +587,150 @@ ConfigModule.forRoot({
 
 
 
+##### 使用dotenv实现多环境稳健配置
+
+1、在项目根目录下创建三个文件`.env`、`.env.production`、`.env.development`
+
+2、安装`cross-env`
+
+通过`cross-env`配置当前环境是开发环境还是生成环境
+
+```bash
+yarn add cross-env
+```
+
+配置`package.json`的`scripts`命令行
+
+```json
+{
+    "scripts": {
+        "build": "cross-env NODE_ENV=production nest build",
+        "start": "cross-env NODE_ENV=development nest start",
+        "start:dev": "cross-env NODE_ENV=development nest start --watch",
+        "start:prod": "cross-env NODE_ENV=production node dist/main",
+      }
+}
+```
+
+3、在`app.module.ts`文件中自定义使用的环境文件
+
+1. 根据`NODE_ENV`判断环境变量，动态设置自定义环境文件
+   app.module.ts
+
+   ```ts
+   let envFilePath = ['.env'];
+   if (process.env.NODE_ENV === 'development') {
+     envFilePath.unshift('.env.development');
+   } else {
+     envFilePath.unshift('.evn.production');
+   }
+   ```
+
+2. 配置自定义环境文件
+   app.module.ts
+
+   ```ts
+   @Module({
+     imports: [
+       ConfigModule.forRoot({
+         isGlobal: true,
+         envFilePath
+       })
+     ]
+   })
+   export class AppModule {}
+   ```
+
+   
+
+#### 二、自定义配置文件
+
+官方支持自定义配置文件，需要使用`@nestjs/config`插件中的`load`属性去加载自定义配置文件
+
+1、在项目根目录下创建环境文件：`config/configuration.ts`、`config/configuration.dev.ts`、`config/configuration.prod.ts`
+
+config/configuration.ts
+
+```ts
+export default () => ({
+    host: '8002'
+});
+```
+
+config/configuration.dev.ts
+
+```ts
+export default () => ({
+    host: '8003'
+});
+```
+
+config/configuration.prod.ts
+
+```ts
+export default () => ({
+    host: '8004'
+});
+```
+
+2、通过`cross-env`注入不同的环境变量
+
+```bash
+{
+    "scripts": {
+        "build": "cross-env NODE_ENV=production nest build",
+        "start": "cross-env NODE_ENV=development nest start",
+        "start:dev": "cross-env NODE_ENV=development nest start --watch",
+        "start:prod": "cross-env NODE_ENV=production node dist/main",
+      }
+}
+```
+
+3、在`app.module.ts`中配置文件
+
+根据不同的环境变量动态配置`load`属性，这里的执行顺序是后面的属性会替换前面的属性，所以这里使用`push`方法
+
+```ts
+let load = [configuration]
+if (process.env.NODE_ENV === 'development') {
+  load.push(configurationDev);
+} else {
+  load.push(configurationProd);
+}
+
+```
+
+完整代码如下：
+
+app.module.ts
+
+```ts
+import { ConfigModule } from '@nestjs/config';
+import configuration from 'config/configuration';
+import configurationDev from 'config/configuration.dev';
+import configurationProd from 'config/configuration.prod';
+
+let load = [configuration]
+if (process.env.NODE_ENV === 'development') {
+  load.push(configurationDev);
+} else {
+  load.push(configurationProd);
+}
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load
+    }),
+})
+export class AppModule {}
+
+```
+
+
+
+
+
 #### Joi插件可以校验环境变量的数据格式
+
